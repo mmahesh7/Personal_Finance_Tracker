@@ -1,70 +1,115 @@
 package com.financetracker.managers;
-import java.io.*;
-import java.util.List;
-import java.util.ArrayList;
-import com.financetracker.exceptions.DataFileException;
+
 import com.financetracker.models.Transaction;
+import com.financetracker.exceptions.DataFileException;
+
+import java.io.*;
+import java.nio.file.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class FileManager {
-    
     private static final String TRANSACTIONS_FILE = "transactions.txt";
     private static final String BACKUP_FILE = "transactions_backup.txt";
 
-    //Creating or Updating the BACKUP_FILE
-    private void createBackup() throws IOException{
-        File original = new File(TRANSACTIONS_FILE);
-        if(original.exists()) {
-            try (FileInputStream fis = new FileInputStream(TRANSACTIONS_FILE);
-            FileOutputStream fos = new FileOutputStream(BACKUP_FILE)) {
-                byte[] buffer = new byte[1024];
-                int length;
-                while((length = fis.read(buffer)) > 0) {
-                    fos.write(buffer, 0, length);
-                }
-            } 
-        }
-    }
-
-    //Saving the transactions
+    /**
+     * Saves transactions atomically:
+     *  - writes to a temporary file
+     *  - if successful, replaces the original file
+     *  - keeps a simple backup copy of the previous file
+     */
     public void saveTransactions(List<Transaction> transactions) throws DataFileException {
-        try {
-            createBackup();
-            try (BufferedWriter writer = new BufferedWriter(new FileWriter(TRANSACTIONS_FILE))) {
-                for(Transaction transaction : transactions){
-                    writer.write(transaction.toFileFormat());
-                    writer.newLine();
+        File temp = new File(TRANSACTIONS_FILE + ".tmp");
+        File dest = new File(TRANSACTIONS_FILE);
+        File backup = new File(BACKUP_FILE);
+
+        // Write to temp file
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(temp))) {
+            for (Transaction t : transactions) {
+                // Basic validation before writing
+                if (t.getId() <= 0 || t.getAmount() <= 0 || t.getDescription() == null || t.getDescription().isEmpty()) {
+                    System.err.println("Skipping invalid transaction in save: " + t);
+                    continue;
                 }
-                System.out.println("Data saved successfully");
+                writer.write(t.toFileFormat());
+                writer.newLine();
             }
-        } catch(IOException e) {
-            throw new DataFileException("Error creating backup file", e);
+        } catch (IOException e) {
+            throw new DataFileException("Failed to write transactions to temp file", e);
         }
+
+        // Create a backup of current file (if exists)
+        try {
+            if (dest.exists()) {
+                Files.copy(dest.toPath(), backup.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            }
+        } catch (IOException e) {
+            // Backup failing should not prevent save, but inform user
+            System.err.println("Warning: Could not create backup: " + e.getMessage());
+        }
+
+        // Replace original with temp (attempt atomic move; fallback to rename)
+        try {
+            try {
+                Files.move(temp.toPath(), dest.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (AtomicMoveNotSupportedException ex) {
+                // fallback
+                Files.move(temp.toPath(), dest.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            }
+        } catch (IOException e) {
+            throw new DataFileException("Failed to replace transactions file", e);
+        }
+
+        System.out.println("Data saved successfully");
     }
 
-    //Load transactions
+    
+    // Loads transactions from the file.
+    // Skips invalid lines but continues reading other lines.
     public List<Transaction> loadTransactions() throws DataFileException {
         List<Transaction> transactions = new ArrayList<>();
         File file = new File(TRANSACTIONS_FILE);
 
-        if(!file.exists()) {
+        if (!file.exists()) {
             System.out.println("No existing data found. Starting fresh");
             return transactions;
         }
 
-        try (BufferedReader reader = new BufferedReader(new FileReader(TRANSACTIONS_FILE))) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
             String line;
-            while((line = reader.readLine()) != null) {
+            int lineNo = 0;
+            while ((line = reader.readLine()) != null) {
+                lineNo++;
+                if (line.trim().isEmpty()) continue;
                 try {
-                    Transaction transaction = Transaction.fromFileFormat(line);
-                    transactions.add(transaction);
-                } catch(Exception e) {
-                    System.err.println("Skipping invalid transaction: "+line);
+                    Transaction t = Transaction.fromFileFormat(line);
+                    transactions.add(t);
+                } catch (IllegalArgumentException e) {
+                    System.out.println("Skipping invalid transaction (line " + lineNo + "): " + line);
                 }
             }
-            System.out.println("Loaded " + transactions.size() + " transactions.");
         } catch (IOException e) {
-            throw new DataFileException("Failed to load transactions", e);
+            throw new DataFileException("Failed to read transactions file", e);
+        }
+
+        System.out.printf("Loaded %d transactions.%n", transactions.size());
+        if (transactions.isEmpty()) {
+            System.out.println("File found but empty. No transactions loaded.");
         }
         return transactions;
     }
+
+    /** Simple restore from backup method (optional, not used automatically) */
+    public void restoreFromBackup() throws DataFileException {
+        File backup = new File(BACKUP_FILE);
+        File dest = new File(TRANSACTIONS_FILE);
+        if (!backup.exists()) throw new DataFileException("Backup file not found");
+
+        try {
+            Files.copy(backup.toPath(), dest.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            throw new DataFileException("Failed to restore from backup", e);
+        }
+    }
 }
+

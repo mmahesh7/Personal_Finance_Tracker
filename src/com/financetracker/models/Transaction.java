@@ -2,112 +2,116 @@ package com.financetracker.models;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.Locale;
 
 public class Transaction {
+    private static int nextId = 1001;
 
-    // WHY static? We want a unique ID for each transaction across ALL instances
-    // WHY start at 1001? Makes it look more professional than starting at 1
-    private static int nextId = 1;
-
-     // WHY private? Encapsulation - we control how these are accessed/modified
     private int id;
     private double amount;
     private String description;
-    private String type; // to check whether its a income or expense
-    private LocalDate date; //At what date & time transaction happened
-    
-    //Constructors
-    //Construnctor for adding new transaction(user creates them)
+    private String type; // "INCOME" or "EXPENSE"
+    private LocalDate date;
+
+    // File date format: ISO (yyyy-MM-dd)
+    private static final DateTimeFormatter FILE_DATE = DateTimeFormatter.ISO_DATE;
+    // Display date format: dd-MM-yyyy
+    private static final DateTimeFormatter DISPLAY_DATE = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+
+    // Constructor for new transactions
     public Transaction(double amount, String description, String type) {
-        this.id = nextId++;//For every new transaction the id increments by 1
+        validateAmount(amount);
+        validateDescription(description);
+        validateType(type);
+
+        this.id = nextId++;
         this.amount = amount;
-        this.description = description;
-        this.type = type.toUpperCase();//to prevent "income" vs "INCOME" issues
+        this.description = description.trim();
+        this.type = type.toUpperCase();
         this.date = LocalDate.now();
     }
-    
-    //Using a set to ensure that user does not enter an existing id ie duplicate id
-    private static Set<Integer> usedIds = new HashSet<>();
 
-    //Constructor for loading a transaction(System create them given id)
-    public Transaction(int id, double amount, String desc, String type, LocalDate date) {
-        if (usedIds.contains(id)) {
-            throw new IllegalArgumentException("Duplicate ID: " + id);
-        }
-        usedIds.add(id);
+    // Constructor for loading from file
+    public Transaction(int id, double amount, String description, String type, LocalDate date) {
+        validateAmount(amount);
+        validateDescription(description);
+        validateType(type);
+
         this.id = id;
         this.amount = amount;
-        this.description = desc;
+        this.description = description.trim();
         this.type = type.toUpperCase();
         this.date = date;
 
-        //Why? When loading from file, we need to make sure future
-        //transactions don't have duplicate IDs
-        if(id >= nextId) {
-            nextId = id + 1;
-        }
+        if (id >= nextId) nextId = id + 1;
     }
 
-    // WHY getters? Encapsulation - we provide controlled access to private fields
-    //Getters : 
+    // Validation helpers
+    private void validateAmount(double amount) {
+        if (amount <= 0) throw new IllegalArgumentException("Amount must be positive");
+    }
+
+    private void validateDescription(String description) {
+        if (description == null || description.trim().isEmpty())
+            throw new IllegalArgumentException("Description cannot be empty");
+    }
+
+    private void validateType(String type) {
+        if (type == null) throw new IllegalArgumentException("Type cannot be null");
+        String t = type.toUpperCase();
+        if (!t.equals("INCOME") && !t.equals("EXPENSE"))
+            throw new IllegalArgumentException("Type must be INCOME or EXPENSE");
+    }
+
+    // Getters
     public int getId() { return id; }
     public double getAmount() { return amount; }
     public String getDescription() { return description; }
     public String getType() { return type; }
     public LocalDate getDate() { return date; }
 
-    //Setters:
-    public void setAmount(double amount) {
-        if(amount <= 0) {
-            throw new IllegalArgumentException("Amount must be positive!");
-        }
-        this.amount = amount;
-    }
-
-    public void setDescription(String description) {
-        if(description == null || description.trim().isEmpty()) {
-            throw new IllegalArgumentException("Description cannot be empty!");
-        }
-        this.description = description.trim();//trim() to remove extra spaces
-    }
-
-    public void setType(String type) {
-        if(!type.equalsIgnoreCase("INCOME") && !type.equalsIgnoreCase("EXPENSE")) {
-            throw new IllegalArgumentException("Type must be INCOME or EXPENSE");
-        }
-        this.type = type.toUpperCase();
-    }
-
-    // Convert transaction to string format for saving to file
+    // File serialization: consistent, Locale.US, pipe delimiter to avoid comma issues
     public String toFileFormat() {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
-        return id + "," + amount + "," + description + "," + type + "," + date.format(formatter);
+        // Replace any '|' in description to avoid delimiter conflicts
+        String safeDesc = description.replace("|", "/");
+        return String.format(Locale.US, "%d|%s|%.2f|%s|%s",
+                id,
+                type,
+                amount,
+                safeDesc,
+                date.format(FILE_DATE)); // yyyy-MM-dd
     }
 
-    // Create transaction from file string (static factory method)
+    // Parse from file-format line
     public static Transaction fromFileFormat(String line) {
-        String[] parts = line.split(",");
-        if (parts.length != 5) {
-            throw new IllegalArgumentException("Invalid file format");
-        }
-        // WHY parse each part? Convert strings back to proper data types
-        int id = Integer.parseInt(parts[0]);
-        double amount = Double.parseDouble(parts[1]);
-        String description = parts[2];
-        String type = parts[3];
-        LocalDate date = LocalDate.parse(parts[4], DateTimeFormatter.ofPattern("dd-MM-yyyy"));
+        if (line == null) throw new IllegalArgumentException("Line is null");
 
-        return new Transaction(id, amount, description, type, date);
+        String[] parts = line.split("\\|", -1); // preserve empty trailing fields
+        if (parts.length != 5) {
+            throw new IllegalArgumentException("Invalid transaction file format");
+        }
+
+        try {
+            int id = Integer.parseInt(parts[0].trim());
+            String type = parts[1].trim();
+            double amount = Double.parseDouble(parts[2].trim());
+            String description = parts[3].trim();
+            LocalDate date = LocalDate.parse(parts[4].trim(), FILE_DATE);
+
+            return new Transaction(id, amount, description, type, date);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Failed to parse transaction: " + line, e);
+        }
     }
 
+    // Human-friendly console representation
     @Override
     public String toString() {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
-
-        // WHY formatted string? Makes output readable
-        return String.format("ID: %d | %s | %.2f | %s | %s", id, type, amount, description, date.format(formatter));
+        return String.format(Locale.US, "ID: %d | %s | %.2f | %s | %s",
+                id,
+                type,
+                amount,
+                description,
+                date.format(DISPLAY_DATE)); // dd-MM-yyyy for display
     }
 }
-
