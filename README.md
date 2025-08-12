@@ -4,7 +4,7 @@ A comprehensive personal finance management application built with Java, demonst
 
 ## 🎯 Project Overview
 
-This Personal Finance Tracker is designed as a learning project that combines practical financial management with Java programming fundamentals. Currently in **Phase 1**, it provides a solid foundation for transaction management with plans to evolve into a feature-rich financial management system.
+This Personal Finance Tracker is part of my Java learning journey — a hands-on project where I’m applying the OOP principles, file handling, and exception management skills I’ve been learning. Currently, in Phase 1, I’m focusing on building a strong foundation for transaction management: adding, viewing, and storing income and expense records with proper data persistence. As I continue to deepen my understanding of Java, I plan to expand this into a feature-rich financial management system with more advanced concepts like interfaces, collections, and possibly even a GUI. This project is both a way to strengthen my coding fundamentals and create something useful in the real world.
 
 ## ✨ Current Features (Phase 1)
 
