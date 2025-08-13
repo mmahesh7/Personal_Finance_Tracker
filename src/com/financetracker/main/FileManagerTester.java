@@ -1,6 +1,8 @@
 package com.financetracker.main;
 
 import com.financetracker.managers.FileManager;
+import com.financetracker.models.Expense;
+import com.financetracker.models.Income;
 import com.financetracker.models.Transaction;
 import com.financetracker.exceptions.DataFileException;
 
@@ -16,8 +18,8 @@ public class FileManagerTester {
 
         // Test 1: Save and load
         List<Transaction> list = Arrays.asList(
-                new Transaction(100, "Test Income", "INCOME"),
-                new Transaction(50, "Test Expense", "EXPENSE")
+                new Income(100, "Test Income", "Salary", "Job"),
+                new Expense(50, "Test Expense", "Food & Dining", true)
         );
         try {
             fm.saveTransactions(list);

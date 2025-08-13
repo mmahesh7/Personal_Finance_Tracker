@@ -1,13 +1,13 @@
 package com.financetracker.main;
 
-import com.financetracker.models.Transaction;
+import com.financetracker.models.*;
 
 public class TransactionTester {
     public static void main(String[] args) {
         System.out.println("=== Transaction Class Tests ===");
 
-        // Test 1: Valid transaction
-        Transaction t1 = new Transaction(500.0, "Salary", "INCOME");
+        // Test 1: Valid Income transaction
+        Transaction t1 = new Income(500.0, "Salary", "Job", "Company XYZ");
         System.out.println("Created: " + t1);
 
         // Test 2: toFileFormat and fromFileFormat
@@ -17,20 +17,30 @@ public class TransactionTester {
         Transaction t2 = Transaction.fromFileFormat(line);
         System.out.println("Parsed: " + t2);
 
-        // Test 3: Invalid type
+        // Test 3: Valid Expense transaction
+        Transaction e1 = new Expense(200.0, "Groceries", "Food & Dining", true);
+        System.out.println("Created: " + e1);
+
+        String expenseLine = e1.toFileFormat();
+        System.out.println("File Format: " + expenseLine);
+
+        Transaction e2 = Transaction.fromFileFormat(expenseLine);
+        System.out.println("Parsed: " + e2);
+
+        // Test 4: Invalid Income amount
         try {
-            new Transaction(100, "Test", "BONUS");
-            System.out.println("FAILED: Invalid type not caught");
-        } catch (IllegalArgumentException e) {
-            System.out.println("PASSED: Invalid type caught");
+            new Income(0, "Test Income", "Other", "Misc");
+            System.out.println("FAILED: Zero amount not caught");
+        } catch (IllegalArgumentException ex) {
+            System.out.println("PASSED: Zero amount caught");
         }
 
-        // Test 4: Invalid amount
+        // Test 5: Invalid Expense amount
         try {
-            new Transaction(0, "Test", "INCOME");
-            System.out.println("FAILED: Zero amount not caught");
-        } catch (IllegalArgumentException e) {
-            System.out.println("PASSED: Zero amount caught");
+            new Expense(-100, "Test Expense", "Bills", false);
+            System.out.println("FAILED: Negative amount not caught");
+        } catch (IllegalArgumentException ex) {
+            System.out.println("PASSED: Negative amount caught");
         }
     }
 }

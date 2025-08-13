@@ -30,9 +30,16 @@ public class Account {
     public double getBalance() { return balance; }
     public int getTransactionCount() { return transactions.size(); }
 
-    public void addIncome(double amount, String description) throws InvalidTransactionException {
+    // Quick add (defaults for category & source)
+    // public void addIncome(double amount, String description) throws InvalidTransactionException {
+    //     addIncome(amount, description, "Other", "Other");
+    // }
+
+    // Full detail add (with category & source)
+    public void addIncome(double amount, String description, String category, String source)
+            throws InvalidTransactionException {
         try {
-            Transaction income = new Transaction(amount, description, "INCOME");
+            Income income = new Income(amount, description, category, source);
             transactions.add(income);
             balance += amount;
             saveData();
@@ -42,13 +49,19 @@ public class Account {
         }
     }
 
-    public void addExpense(double amount, String description) throws InvalidTransactionException, InsufficientFundsException {
-        if (balance < amount) {
-            throw new InsufficientFundsException(String.format(Locale.US,
-                    "Insufficient funds. Balance: %.2f, Required: %.2f", balance, amount));
-        }
+    // Quick add (defaults for category & essential flag)
+    // public void addExpense(double amount, String description) throws InvalidTransactionException, InsufficientFundsException {
+    //     addExpense(amount, description, "Other", false);
+    // }
+
+    // Full detail add (with category & essential flag)
+    public void addExpense(double amount, String description, String category, boolean isEssential)
+            throws InvalidTransactionException, InsufficientFundsException {
         try {
-            Transaction expense = new Transaction(amount, description, "EXPENSE");
+            if (balance < amount) {
+                throw new InsufficientFundsException("Insufficient balance for expense.");
+            }
+            Expense expense = new Expense(amount, description, category, isEssential);
             transactions.add(expense);
             balance -= amount;
             saveData();
@@ -126,7 +139,11 @@ public class Account {
     }
 
     private void recalcBalance() {
-        balance = getTotalIncome() - getTotalExpenses();
+        double total = 0.0;
+        for (Transaction t : transactions) {
+            total += t.getBalanceImpact(); // Income positive, Expense negative
+        }
+        balance = total;
     }
 
     // Optional helper used by some tests
