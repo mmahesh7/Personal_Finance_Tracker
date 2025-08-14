@@ -31,9 +31,9 @@ public class Account {
     public int getTransactionCount() { return transactions.size(); }
 
     // Quick add (defaults for category & source)
-    // public void addIncome(double amount, String description) throws InvalidTransactionException {
-    //     addIncome(amount, description, "Other", "Other");
-    // }
+    public void addIncome(double amount, String description) throws InvalidTransactionException {
+        addIncome(amount, description, "Other", "Other");
+    }
 
     // Full detail add (with category & source)
     public void addIncome(double amount, String description, String category, String source)
@@ -50,10 +50,11 @@ public class Account {
     }
 
     // Quick add (defaults for category & essential flag)
-    // public void addExpense(double amount, String description) throws InvalidTransactionException, InsufficientFundsException {
-    //     addExpense(amount, description, "Other", false);
-    // }
+    public void addExpense(double amount, String description) throws InvalidTransactionException, InsufficientFundsException {
+        addExpense(amount, description, "Other", false);
+    }
 
+    
     // Full detail add (with category & essential flag)
     public void addExpense(double amount, String description, String category, boolean isEssential)
             throws InvalidTransactionException, InsufficientFundsException {
@@ -62,6 +63,22 @@ public class Account {
                 throw new InsufficientFundsException("Insufficient balance for expense.");
             }
             Expense expense = new Expense(amount, description, category, isEssential);
+            transactions.add(expense);
+            balance -= amount;
+            saveData();
+            System.out.printf(Locale.US, "Expense added: %.2f. New balance: %.2f%n", amount, balance);
+        } catch (IllegalArgumentException e) {
+            throw new InvalidTransactionException("Invalid expense data: " + e.getMessage());
+        }
+    }
+
+    //Complete add expense(with all fields)
+    public void addExpense(double amount, String description, String category, boolean isEssential, String paymentMethod) throws InvalidTransactionException, InsufficientFundsException{
+        try{
+            if(balance < amount) {
+                throw new InsufficientFundsException("Insufficient balance for expense.");
+            }
+            Expense expense = new Expense(amount, description, category, isEssential, paymentMethod);
             transactions.add(expense);
             balance -= amount;
             saveData();

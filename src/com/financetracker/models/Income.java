@@ -39,6 +39,12 @@ public class Income extends Transaction {
         return "+"; // WHY +? Visual indicator of money coming in
     }
     
+    @Override
+    protected String getAdditionalFields() {
+        // Format: just the source for now
+        return source;
+    }
+    
     // Income-specific methods
     public String getSource() { return source; }
     

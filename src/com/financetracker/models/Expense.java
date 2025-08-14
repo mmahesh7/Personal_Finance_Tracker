@@ -10,6 +10,7 @@ public class Expense extends Transaction {
     public Expense(double amount, String description, String category, boolean isEssential) {
         this(amount, description, category, isEssential, "Unknown");
     }
+
     // Constructor for new expense
     public Expense(double amount, String description, String category, 
                    boolean isEssential, String paymentMethod) {
@@ -47,6 +48,12 @@ public class Expense extends Transaction {
     @Override
     public String getDisplaySymbol() {
         return "-"; // WHY -? Visual indicator of money going out
+    }
+
+    @Override
+    protected String getAdditionalFields() {
+        // Format: "isEssential,paymentMethod"
+        return isEssential + "," + paymentMethod;
     }
     
     // Expense-specific methods

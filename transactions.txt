@@ -1,2 +1,7 @@
-1001|INCOME|100.00|Pocket Money|Other|2025-08-13
-1002|INCOME|3000.00|Salary|Other|2025-08-13
+1001|INCOME|100.00|Pocket Money|Other|2025-08-13|Other
+1002|INCOME|3000.00|Salary|Other|2025-08-13|Other
+1003|INCOME|1000.00|phone bill|Other|2025-08-14|Other
+1004|INCOME|3000.00|hostel fee|Hostel|2025-08-14|maa
+1005|EXPENSE|35.00|brush|Other|2025-08-14|false,Unknown
+1006|EXPENSE|4500.00|hostel fee|Rent|2025-08-14|true,Online
+1007|INCOME|3000.00|X|Other|2025-08-14|Other

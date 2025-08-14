@@ -47,8 +47,8 @@ public class FileManagerTester {
         }
     }
 
-    private static void cleanup() {
-        new File("transactions.txt").delete();
-        new File("transactions_backup.txt").delete();
-    }
+    // private static void cleanup() {
+    //     new File("transactions.txt").delete();
+    //     new File("transactions_backup.txt").delete();
+    // }
 }

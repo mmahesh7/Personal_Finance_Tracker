@@ -26,9 +26,21 @@ public class FileManager {
         // Write to temp file
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(temp))) {
             for (Transaction t : transactions) {
-                // Basic validation before writing
-                if (t.getId() <= 0 || t.getAmount() <= 0 || t.getDescription() == null || t.getDescription().isEmpty()) {
-                    System.err.println("Skipping invalid transaction in save: " + t);
+                // Enhanced validation - let Transaction class handle its own validation
+                if (t == null) {
+                    System.err.println("Warning: Skipping null transaction");
+                    continue;
+                }
+                if (t.getId() <= 0) {
+                    System.err.println("Warning: Skipping transaction with invalid ID: " + t.getId());
+                    continue;
+                }
+                if (t.getAmount() <= 0) {
+                    System.err.println("Warning: Skipping transaction with invalid amount: " + t.getAmount());
+                    continue;
+                }
+                if (t.getDescription() == null || t.getDescription().trim().isEmpty()) {
+                    System.err.println("Warning: Skipping transaction with invalid description");
                     continue;
                 }
                 writer.write(t.toFileFormat());
@@ -78,24 +90,38 @@ public class FileManager {
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
             String line;
             int lineNo = 0;
+            int validTransactions = 0;
+            int invalidTransactions = 0;
+            
             while ((line = reader.readLine()) != null) {
                 lineNo++;
                 if (line.trim().isEmpty()) continue;
+                
                 try {
                     Transaction t = Transaction.fromFileFormat(line);
                     transactions.add(t);
+                    validTransactions++;
                 } catch (IllegalArgumentException e) {
-                    System.out.println("Skipping invalid transaction (line " + lineNo + "): " + line);
+                    System.err.println("Skipping invalid transaction (line " + lineNo + "): " + line);
+                    System.err.println("  Reason: " + e.getMessage());
+                    invalidTransactions++;
                 }
             }
+            
+            System.out.printf("Loaded %d valid transactions", validTransactions);
+            if (invalidTransactions > 0) {
+                System.out.printf(" (%d invalid lines skipped)", invalidTransactions);
+            }
+            System.out.println();
+            
         } catch (IOException e) {
             throw new DataFileException("Failed to read transactions file", e);
         }
 
-        System.out.printf("Loaded %d transactions.%n", transactions.size());
-        if (transactions.isEmpty()) {
-            System.out.println("File found but empty. No transactions loaded.");
+        if (transactions.isEmpty() && new File(TRANSACTIONS_FILE).length() > 0) {
+            System.out.println("Warning: File found but no valid transactions loaded.");
         }
+        
         return transactions;
     }
 
